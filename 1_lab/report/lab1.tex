@@ -1,0 +1,101 @@
+\documentclass[a4paper,12pt]{article}
+
+
+\usepackage[utf8]{inputenc}
+\usepackage[english, russian]{babel}
+\usepackage[russian]{babel}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{cmap}
+\usepackage[T2A]{fontenc}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\graphicspath{{./img/}}
+
+\definecolor{linkcolor}{HTML}{000000}
+\definecolor{urlcolor}{HTML}{0085FF}
+\hypersetup{pdfstartview=FitH,  linkcolor=linkcolor,urlcolor=urlcolor, colorlinks=true}
+
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+
+\renewcommand*\contentsname{Содержание}
+
+\newcommand{\plot}[3]{
+    \begin{figure}[H]
+        \begin{center}
+            \includegraphics[scale=0.6]{#1}
+            \caption{#2}
+            \label{#3}
+        \end{center}
+    \end{figure}
+}
+
+\begin{document}
+    \include{title}
+    \newpage
+
+    \tableofcontents
+%    \listoffigures
+    \newpage
+
+    \section{Постановка задачи}
+    \quad Требуется создать систему, состоящую из двух элементов - источника (Sender) и приемника (Receiver).
+    Эти элементы должны осуществлять обмен сообщениями через канал связи, используя протоколы автоматического запроса на повторную передачу данных с использованием динамического окна: Go-Back-N и Selective Repeat.
+
+    Необходимо определить, как зависят время работы и общее количество отправленных сообщений от размера динамического окна и вероятности потери сообщений для каждого из протоколов, а также провести их сравнительный анализ.
+
+    \section{Теория} \label{s:theory}
+    \quad Протоколы Go-Back-N и Selective Repeat являются протоколами скользящего окна.
+    Основное различие между этими двумя протоколами заключается в том, что после обнаружения подозрительного или поврежденного сообщения
+    протокол Go-Back-N повторно передает все сообщения, не получившие подтверждения о получении,
+    тогда как протокол Selective Repeat повторно передает только то сообщение, которое оказалось повреждено.
+
+    \section{Реализация}
+    \quad Весь код написан на языке Python (версии 3.9).
+    Для каждого протокола получатель и отправитель работают параллельно в отдельных потоках.
+    \href{https://github.com/gobdr/Networks/tree/master/1_lab}{Ссылка на GitHub с исходным кодом}.
+
+    \section{Результаты}
+    \quad Для сравнения двух протоколов введем две ключевые метрики: количество сообщений, которые необходимо было отправить источником, и общее время работы протокола, необходимое для того, чтобы приемник успешно принял все сообщения в полном объеме без повреждений.
+    Изучим, как эти метрики зависят от размера окна передачи, времени ожидания (таймаута) и вероятности потери сообщений.
+
+    Во всех экспериментах, если не указано иное, предполагается, что количество сообщений, которые приемник должен принять от источника, составляет 100, а таймаут установлен на уровне 0.5 секунд.
+
+    Для начала рассмотрим, как размер таймаута влияет на количество отправленных сообщений и общее время работы протокола.
+    В этих тестах размер окна установлен равным 10, и предполагается, что сообщения не могут быть повреждены, как показано на рисунках \ref{p:timeoutsMessageNum} и \ref{p:timeoutsWorkingTime}.
+
+    \plot{timeoutsMessageNum}{Число сообщений от таймаута (размер окна = 10, вероятность повреждения сообщения = 0.0)}{p:timeoutsMessageNum}
+    \plot{timeoutsWorkingTime}{Время работы от таймаута (размер окна = 10, вероятность повреждения сообщения = 0.0)}{p:timeoutsWorkingTime}
+
+    Очевидно, что при слишком коротких интервалах ожидания (таймаутах), отправитель иногда не успевает дождаться подтверждения от получателя до истечения таймаута, что приводит к повторной отправке некоторых сообщений. Однако, если увеличить продолжительность таймаута, такие ситуации исчезают, и общее количество отправленных сообщений становится равным количеству успешно доставленных сообщений.
+    Далее рассмотрим зависимость общего числа отправленных сообщений и времени работы от размера окна передачи данных, начиная с протокола Go-Back-N.
+
+    \plot{rateSizeGBNMessageNum}{Go-Back-N. Число сообщений от размера окна}{p:rateSizeGBNMessageNum}
+    \plot{rateSizeGBNWorkingTime}{Go-Back-N. Время работы от размера окна}{p:rateSizeGBNWorkingTime}
+
+    И для протокола Selective Repeat.
+
+    \plot{rateSizeSRPMessageNum}{Selective Repeat. Число сообщений от размера окна}{p:rateSizeSRPMessageNum}
+    \plot{rateSizeSRPWorkingTime}{Selective Repeat. Время работы от размера окна}{p:rateSizeSRPWorkingTime}
+
+    Из представленного на рисунке \ref{p:rateSizeGBNMessageNum} видно, что в протоколе Go-Back-N количество отправленных сообщений увеличивается в соответствии с размером окна. Это особенно заметно при высоких вероятностях потери сообщений. В то же время, как показано на рисунке \ref{p:rateSizeGBNWorkingTime}, продолжительность работы Go-Back-N не зависит от размера окна. В контрасте, в протоколе Selective Repeat, размер окна не влияет на общее количество отправленных сообщений, как показано на рисунке \ref{p:rateSizeSRPMessageNum}. Однако, время работы протокола Selective Repeat уменьшается с увеличением размера окна, но прирост эффективности снижается при дальнейшем увеличении размера, что отражено на рисунке \ref{p:rateSizeSRPWorkingTime}.
+    Также будет рассмотрена зависимость этих же метрик от вероятности потери сообщений для протокола Go-Back-N.
+
+    \plot{sizeRateGBNMessageNum}{Go-Back-N. Число сообщений от вероятности потери сообщения}{p:sizeRateGBNMessageNum}
+    \plot{sizeRateGBNWorkingTime}{Go-Back-N. Время работы от вероятности потери сообщения}{p:sizeRateGBNWorkingTime}
+
+    А для Selective Repeat.
+    
+    \plot{sizeRateSRPMessageNum}{Selective Repeat. Число сообщений от вероятности потери сообщения}{p:sizeRateSRPMessageNum}
+    \plot{sizeRateSRPWorkingTime}{Selective Repeat. Время работы от вероятности потери сообщения}{p:sizeRateSRPWorkingTime}
+
+    Как видно на рисунках \ref{p:sizeRateGBNMessageNum}, \ref{p:sizeRateSRPMessageNum} общее число отправленных сообщений с ростом вероятности потери сообщения
+    у протокола Go-Back-N сильно больше, чем у протокола Selective Repeat.
+    Как следствие, Go-Back-N работает значительно дольше, чем Selective Repeat (рис. \ref{p:sizeRateGBNWorkingTime}, \ref{p:sizeRateSRPWorkingTime}).
+
+    \section{Заключение}
+    \quad Из полученных данных видно, что при одинаковых условиях протокол Selective Repeat требует отправки меньшего количества сообщений по сравнению с протоколом Go-Back-N. Это соответствует ожиданиям, учитывая различия в обработке и повторной отправке потерянных сообщений, описанных в разделе \ref{s:theory}. В результате, протокол Selective Repeat демонстрирует более высокую скорость работы по сравнению с протоколом Go-Back-N.
+
+\end{document}
